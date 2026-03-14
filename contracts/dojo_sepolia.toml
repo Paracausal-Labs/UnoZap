@@ -11,9 +11,9 @@ default = "unozap"
 
 [env]
 rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
-# Fill in your funded Sepolia account
-account_address = "0x030435384728bb534b33f52584d01fc1a55475187b53e162b0db0cd429b23dd3"
-private_key = "0x62dea75ab279054270953975825144abb5140e5befa6cf80bc972395955b40"
+# Set via environment variables - DO NOT commit secrets
+# account_address = ""
+# private_key = ""
 
 [writers]
 "unozap" = ["unozap-lobby", "unozap-gameplay"]
