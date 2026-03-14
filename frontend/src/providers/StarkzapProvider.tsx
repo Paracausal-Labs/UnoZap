@@ -1,9 +1,11 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import Controller from '@cartridge/controller';
+
 
 interface WalletState {
-  wallet: any | null;
+  account: any | null;
   address: string | null;
   connecting: boolean;
 }
@@ -22,37 +24,55 @@ export function useStarkzap() {
   return ctx;
 }
 
-// Contract addresses - will be set after deployment
 const LOBBY_CONTRACT = process.env.NEXT_PUBLIC_LOBBY_CONTRACT ?? '';
 const GAMEPLAY_CONTRACT = process.env.NEXT_PUBLIC_GAMEPLAY_CONTRACT ?? '';
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'https://api.cartridge.gg/x/starknet/sepolia';
 
 export default function StarkzapProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WalletState>({
-    wallet: null,
+    account: null,
     address: null,
     connecting: false,
   });
+  const controllerRef = useRef<Controller | null>(null);
 
   const connect = useCallback(async () => {
     setState((s) => ({ ...s, connecting: true }));
     try {
-      const { StarkSDK, OnboardStrategy } = await import('starkzap');
-      const sdk = new StarkSDK({ network: 'sepolia' });
-      const { wallet } = await sdk.onboard({
-        strategy: OnboardStrategy.Cartridge,
-        cartridge: {
-          policies: [
-            { target: LOBBY_CONTRACT, method: 'create_game' },
-            { target: LOBBY_CONTRACT, method: 'join_game' },
-            { target: GAMEPLAY_CONTRACT, method: 'play_card' },
-            { target: GAMEPLAY_CONTRACT, method: 'draw_card' },
-            { target: GAMEPLAY_CONTRACT, method: 'pass_turn' },
-            { target: GAMEPLAY_CONTRACT, method: 'timeout_turn' },
-          ],
-        },
-      });
-      await wallet.ensureReady({ deploy: 'if_needed' });
-      setState({ wallet, address: wallet.address, connecting: false });
+      if (!controllerRef.current) {
+        controllerRef.current = new Controller({
+          rpcUrl: RPC_URL,
+          policies: {
+            contracts: {
+              [LOBBY_CONTRACT]: {
+                methods: [
+                  { name: 'create_game', entrypoint: 'create_game' },
+                  { name: 'join_game', entrypoint: 'join_game' },
+                ],
+              },
+              [GAMEPLAY_CONTRACT]: {
+                methods: [
+                  { name: 'play_card', entrypoint: 'play_card' },
+                  { name: 'draw_card', entrypoint: 'draw_card' },
+                  { name: 'pass_turn', entrypoint: 'pass_turn' },
+                  { name: 'timeout_turn', entrypoint: 'timeout_turn' },
+                ],
+              },
+            },
+          },
+        });
+      }
+
+      const account = await controllerRef.current.connect();
+      if (account) {
+        setState({
+          account,
+          address: account.address,
+          connecting: false,
+        });
+      } else {
+        setState((s) => ({ ...s, connecting: false }));
+      }
     } catch (err) {
       setState((s) => ({ ...s, connecting: false }));
       throw err;
@@ -60,17 +80,17 @@ export default function StarkzapProvider({ children }: { children: ReactNode }) 
   }, []);
 
   const disconnect = useCallback(() => {
-    setState({ wallet: null, address: null, connecting: false });
+    controllerRef.current?.disconnect();
+    setState({ account: null, address: null, connecting: false });
   }, []);
 
   const execute = useCallback(
     async (calls: any[]) => {
-      if (!state.wallet) throw new Error('Not connected');
-      const tx = await state.wallet.execute(calls);
-      await tx.wait();
-      return tx;
+      if (!state.account) throw new Error('Not connected');
+      const result = await state.account.execute(calls);
+      return result;
     },
-    [state.wallet],
+    [state.account],
   );
 
   return (
