@@ -2,7 +2,7 @@
 
 On-chain UNO card game built on Starknet with gasless gameplay powered by [Starkzap](https://starkzap.io).
 
-[Watch Demo](https://youtu.be/w1dhEyoUr7Y).
+[Watch Demo Video](https://youtu.be/w1dhEyoUr7Y).
 
 ## Overview
 
