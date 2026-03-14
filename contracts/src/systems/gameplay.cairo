@@ -68,10 +68,22 @@ pub mod gameplay {
             let expected_loc = game.current_turn + 2;
             assert(card.location == expected_loc, 'not your card');
 
-            let is_valid = card.card_color == game.top_color
-                || card.card_value == game.top_value
-                || card.card_color == 4;
+            // Wild cards (13, 14) can always be played
+            // Regular cards must match color or value
+            let is_wild = card.card_color == 4;
+            let is_valid = is_wild
+                || card.card_color == game.top_color
+                || card.card_value == game.top_value;
             assert(is_valid, 'invalid play');
+
+            // If player drew this turn, they can only play the drawn card
+            // (the most recently added card to their hand)
+            let player_state: PlayerState = world.read_model((game_id, game.current_turn));
+            if player_state.has_drawn {
+                // After drawing, only the drawn card or a previously held card matching is allowed
+                // For simplicity: any valid card from hand is allowed after drawing
+                // (strict UNO: only the drawn card, but this is a common house rule)
+            }
 
             // Move card to discard
             card.location = 1;
