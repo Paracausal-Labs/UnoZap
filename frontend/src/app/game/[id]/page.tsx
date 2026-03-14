@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
 import Image from 'next/image';
 import { useStarkzap } from '@/providers/StarkzapProvider';
 import { useGame } from '@/hooks/useGame';
@@ -33,7 +33,18 @@ export default function GamePage({ params }: PageProps) {
     playCard,
     drawCard,
     passTurn,
+    callTimeout,
   } = useGame(gameId);
+
+  // Auto-call timeout when timer hits 0 and it's not our turn
+  useEffect(() => {
+    if (!game || game.state !== 1 || timeLeft > 0) return;
+    // Anyone can call timeout after deadline
+    const timer = setTimeout(() => {
+      callTimeout().catch((err: any) => console.warn('Timeout call failed:', err));
+    }, 2000); // 2s grace period
+    return () => clearTimeout(timer);
+  }, [timeLeft, game, callTimeout]);
 
   if (!address) {
     return (

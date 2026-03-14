@@ -26,7 +26,8 @@ export function useStarkzap() {
 
 const LOBBY_CONTRACT = process.env.NEXT_PUBLIC_LOBBY_CONTRACT ?? '';
 const GAMEPLAY_CONTRACT = process.env.NEXT_PUBLIC_GAMEPLAY_CONTRACT ?? '';
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'https://api.cartridge.gg/x/starknet/sepolia';
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'https://api.cartridge.gg/x/unozap/katana';
+const CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID ?? 'WP_UNOZAP';
 
 export default function StarkzapProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WalletState>({
@@ -41,6 +42,8 @@ export default function StarkzapProvider({ children }: { children: ReactNode }) 
     try {
       if (!controllerRef.current) {
         controllerRef.current = new Controller({
+          defaultChainId: CHAIN_ID,
+          chains: { [CHAIN_ID]: { rpcUrl: RPC_URL } } as any,
           rpcUrl: RPC_URL,
           policies: {
             contracts: {
