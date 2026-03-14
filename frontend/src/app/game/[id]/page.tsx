@@ -141,7 +141,7 @@ export default function GamePage({ params }: PageProps) {
             Waiting for Players
           </h2>
           <div className="flex gap-5">
-            {Array.from({ length: 4 }).map((_, i) => (
+            {Array.from({ length: 2 }).map((_, i) => (
               <div
                 key={i}
                 className={`w-28 h-28 rounded-2xl flex flex-col items-center justify-center text-lg font-bold transition-all duration-300 ${
@@ -162,10 +162,10 @@ export default function GamePage({ params }: PageProps) {
             ))}
           </div>
           <p className="text-gray-300 text-lg">
-            {game.playerCount}/4 players
+            {game.playerCount}/2 players
           </p>
           <p className="text-gray-500 text-sm">
-            Game starts automatically when all 4 players join
+            Game starts automatically when your opponent joins
           </p>
         </div>
       </div>

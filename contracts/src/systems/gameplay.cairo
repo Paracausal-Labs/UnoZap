@@ -125,7 +125,7 @@ pub mod gameplay {
             }
 
             // Apply effects and advance turn
-            let next = next_player(game.current_turn, game.direction);
+            let next = next_player(game.current_turn, game.direction, game.player_count);
 
             if card.card_value == 11 {
                 // Reverse
@@ -134,19 +134,19 @@ pub mod gameplay {
                 } else {
                     0
                 };
-                let next_reversed = next_player(game.current_turn, game.direction);
+                let next_reversed = next_player(game.current_turn, game.direction, game.player_count);
                 game.current_turn = next_reversed;
             } else if card.card_value == 10 {
                 // Skip
-                game.current_turn = next_player(next, game.direction);
+                game.current_turn = next_player(next, game.direction, game.player_count);
             } else if card.card_value == 12 {
                 // Draw Two
                 draw_cards(ref world, game_id, next, 2, ref game);
-                game.current_turn = next_player(next, game.direction);
+                game.current_turn = next_player(next, game.direction, game.player_count);
             } else if card.card_value == 14 {
                 // Wild Draw Four
                 draw_cards(ref world, game_id, next, 4, ref game);
-                game.current_turn = next_player(next, game.direction);
+                game.current_turn = next_player(next, game.direction, game.player_count);
             } else {
                 game.current_turn = next;
             }
@@ -195,7 +195,7 @@ pub mod gameplay {
             player.has_drawn = false;
             world.write_model(@player);
 
-            game.current_turn = next_player(game.current_turn, game.direction);
+            game.current_turn = next_player(game.current_turn, game.direction, game.player_count);
             game.turn_deadline = get_block_timestamp() + 30;
             world.write_model(@game);
         }
@@ -223,7 +223,7 @@ pub mod gameplay {
                 world.write_model(@player);
             }
 
-            game.current_turn = next_player(game.current_turn, game.direction);
+            game.current_turn = next_player(game.current_turn, game.direction, game.player_count);
             game.turn_deadline = get_block_timestamp() + 30;
             world.write_model(@game);
 
@@ -255,12 +255,12 @@ pub mod gameplay {
         world.write_model(@player);
     }
 
-    fn next_player(current: u8, direction: u8) -> u8 {
+    fn next_player(current: u8, direction: u8, player_count: u8) -> u8 {
         if direction == 0 {
-            (current + 1) % 4
+            (current + 1) % player_count
         } else {
             if current == 0 {
-                3
+                player_count - 1
             } else {
                 current - 1
             }

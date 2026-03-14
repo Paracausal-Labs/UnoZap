@@ -128,14 +128,14 @@ export default function LobbyPage() {
                 <h3 className="text-xl font-bold mb-3 text-white tracking-wide uppercase">
                   Game Created!
                 </h3>
-                <p className="text-gray-400 text-sm mb-4">Share this code with 3 friends:</p>
+                <p className="text-gray-400 text-sm mb-4">Share this code with your opponent:</p>
                 <div className="arcade-display">
                   {createdCode.split('').map((ch, i) => (
                     <span key={i} className="arcade-char">{ch}</span>
                   ))}
                 </div>
                 <p className="text-gray-500 text-sm mb-2 mt-4">
-                  Game starts when 4 players join
+                  Game starts when your opponent joins
                 </p>
                 {createdGameId !== null && (
                   <>

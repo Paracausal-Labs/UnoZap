@@ -92,7 +92,7 @@ pub mod lobby {
             let mut game: Game = world.read_model(game_id);
             assert(game.state == 0, 'game not waiting');
             assert(game.join_code == join_code, 'wrong join code');
-            assert(game.player_count < 4, 'game full');
+            assert(game.player_count < 2, 'game full');
 
             // Prevent duplicate joins
             let mut i: u8 = 0;
@@ -118,7 +118,7 @@ pub mod lobby {
 
             game.player_count += 1;
 
-            if game.player_count == 4 {
+            if game.player_count == 2 {
                 let seed = core::poseidon::poseidon_hash_span(
                     array![
                         get_block_timestamp().into(),
@@ -129,10 +129,11 @@ pub mod lobby {
                 );
                 game.seed = seed;
 
-                initialize_deck(ref world, game_id, seed);
+                initialize_deck(ref world, game_id, seed, game.player_count);
 
-                // Read the starting discard card (position 28)
-                let start_card: DeckCard = world.read_model((game_id, 28_u8));
+                // Read the starting discard card (position 14 for 2 players)
+                let discard_pos: u8 = game.player_count * 7;
+                let start_card: DeckCard = world.read_model((game_id, discard_pos));
                 let mut top_color = start_card.card_color;
                 let top_value = start_card.card_value;
 
@@ -142,7 +143,7 @@ pub mod lobby {
 
                 game.top_color = top_color;
                 game.top_value = top_value;
-                game.draw_index = 29;
+                game.draw_index = discard_pos + 1;
                 game.state = 1;
                 game.direction = 0;
                 game.turn_deadline = get_block_timestamp() + 30;
@@ -150,7 +151,7 @@ pub mod lobby {
                 // Set card counts FIRST (before starting card effects modify them)
                 let mut p: u8 = 0;
                 loop {
-                    if p >= 4 {
+                    if p >= game.player_count {
                         break;
                     }
                     let mut ps: PlayerState = world.read_model((game_id, p));
@@ -165,7 +166,7 @@ pub mod lobby {
                     game.current_turn = 1;
                 } else if top_value == 11 {
                     game.direction = 1;
-                    game.current_turn = 3;
+                    game.current_turn = game.player_count - 1;
                 } else if top_value == 12 {
                     // Draw Two: player 0 draws 2 and is skipped
                     let mut d: u8 = 0;
@@ -192,7 +193,7 @@ pub mod lobby {
         }
     }
 
-    fn initialize_deck(ref world: dojo::world::WorldStorage, game_id: u32, seed: felt252) {
+    fn initialize_deck(ref world: dojo::world::WorldStorage, game_id: u32, seed: felt252, player_count: u8) {
         // Fisher-Yates shuffle using Felt252Dict
         let mut deck: Felt252Dict<u8> = Default::default();
         let mut i: u8 = 0;
@@ -225,6 +226,7 @@ pub mod lobby {
         };
 
         // Create card models from shuffled deck
+        let discard_pos: u8 = player_count * 7;
         let mut pos: u8 = 0;
         loop {
             if pos >= 108 {
@@ -233,15 +235,10 @@ pub mod lobby {
             let card_id = deck.get(pos.into());
             let (color, value) = card_info(card_id);
 
-            let location: u8 = if pos < 7 {
-                2 // player 0 hand
-            } else if pos < 14 {
-                3 // player 1 hand
-            } else if pos < 21 {
-                4 // player 2 hand
-            } else if pos < 28 {
-                5 // player 3 hand
-            } else if pos == 28 {
+            // Assign location: first N*7 cards to player hands, then discard, then draw pile
+            let location: u8 = if pos < discard_pos {
+                (pos / 7) + 2 // player hands: location 2,3,4,...
+            } else if pos == discard_pos {
                 1 // discard pile
             } else {
                 0 // draw pile

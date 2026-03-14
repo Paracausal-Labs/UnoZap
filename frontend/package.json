@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem",
     "build": "next build",
     "start": "next start"
   },
@@ -14,7 +14,7 @@
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "starknet": "^9.4.2",
+    "starknet": "^6.23.1",
     "starkzap": "^1.0.0"
   },
   "devDependencies": {
