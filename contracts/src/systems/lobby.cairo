@@ -147,35 +147,7 @@ pub mod lobby {
                 game.direction = 0;
                 game.turn_deadline = get_block_timestamp() + 30;
 
-                // Handle starting card effects
-                game.current_turn = 0;
-                if top_value == 10 {
-                    // Skip: player 0 skipped
-                    game.current_turn = 1;
-                } else if top_value == 11 {
-                    // Reverse: direction flips, play goes to player 3
-                    game.direction = 1;
-                    game.current_turn = 3;
-                } else if top_value == 12 {
-                    // Draw Two: player 0 draws 2 and is skipped
-                    let mut d: u8 = 0;
-                    loop {
-                        if d >= 2 || game.draw_index >= 108 {
-                            break;
-                        }
-                        let mut drawn: DeckCard = world.read_model((game_id, game.draw_index));
-                        drawn.location = 2; // player 0 hand
-                        world.write_model(@drawn);
-                        game.draw_index += 1;
-                        d += 1;
-                    };
-                    let mut p0: PlayerState = world.read_model((game_id, 0_u8));
-                    p0.card_count += 2;
-                    world.write_model(@p0);
-                    game.current_turn = 1;
-                }
-
-                // Set card counts
+                // Set card counts FIRST (before starting card effects modify them)
                 let mut p: u8 = 0;
                 loop {
                     if p >= 4 {
@@ -186,6 +158,32 @@ pub mod lobby {
                     world.write_model(@ps);
                     p += 1;
                 };
+
+                // Handle starting card effects
+                game.current_turn = 0;
+                if top_value == 10 {
+                    game.current_turn = 1;
+                } else if top_value == 11 {
+                    game.direction = 1;
+                    game.current_turn = 3;
+                } else if top_value == 12 {
+                    // Draw Two: player 0 draws 2 and is skipped
+                    let mut d: u8 = 0;
+                    loop {
+                        if d >= 2 || game.draw_index >= 108 {
+                            break;
+                        }
+                        let mut drawn: DeckCard = world.read_model((game_id, game.draw_index));
+                        drawn.location = 2;
+                        world.write_model(@drawn);
+                        game.draw_index += 1;
+                        d += 1;
+                    };
+                    let mut p0: PlayerState = world.read_model((game_id, 0_u8));
+                    p0.card_count = 9; // 7 dealt + 2 penalty
+                    world.write_model(@p0);
+                    game.current_turn = 1;
+                }
 
                 world.emit_event(@GameStarted { game_id, top_color, top_value });
             }

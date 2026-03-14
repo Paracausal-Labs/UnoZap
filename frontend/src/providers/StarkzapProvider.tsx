@@ -1,8 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
-import Controller from '@cartridge/controller';
-
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react';
+import Controller, { parseChainId } from '@cartridge/controller';
 
 interface WalletState {
   account: any | null;
@@ -27,6 +26,33 @@ export function useStarkzap() {
 const LOBBY_CONTRACT = process.env.NEXT_PUBLIC_LOBBY_CONTRACT ?? '';
 const GAMEPLAY_CONTRACT = process.env.NEXT_PUBLIC_GAMEPLAY_CONTRACT ?? '';
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'https://api.cartridge.gg/x/unozap/katana';
+const DEFAULT_CHAIN_ID = parseChainId(new URL(RPC_URL));
+
+function getController() {
+  return new Controller({
+    chains: [{ rpcUrl: RPC_URL }],
+    defaultChainId: DEFAULT_CHAIN_ID,
+    preset: 'unozap',
+    policies: {
+      contracts: {
+        [LOBBY_CONTRACT]: {
+          methods: [
+            { name: 'create_game', entrypoint: 'create_game' },
+            { name: 'join_game', entrypoint: 'join_game' },
+          ],
+        },
+        [GAMEPLAY_CONTRACT]: {
+          methods: [
+            { name: 'play_card', entrypoint: 'play_card' },
+            { name: 'draw_card', entrypoint: 'draw_card' },
+            { name: 'pass_turn', entrypoint: 'pass_turn' },
+            { name: 'timeout_turn', entrypoint: 'timeout_turn' },
+          ],
+        },
+      },
+    },
+  });
+}
 
 export default function StarkzapProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WalletState>({
@@ -36,41 +62,26 @@ export default function StarkzapProvider({ children }: { children: ReactNode }) 
   });
   const controllerRef = useRef<Controller | null>(null);
 
+  // Auto-reconnect on page load
+  useEffect(() => {
+    const ctrl = getController();
+    controllerRef.current = ctrl;
+    ctrl.probe().then((account) => {
+      if (account) {
+        setState({ account, address: account.address, connecting: false });
+      }
+    }).catch(() => {});
+  }, []);
+
   const connect = useCallback(async () => {
     setState((s) => ({ ...s, connecting: true }));
     try {
       if (!controllerRef.current) {
-        controllerRef.current = new Controller({
-          rpcUrl: RPC_URL,
-          preset: 'unozap',
-          policies: {
-            contracts: {
-              [LOBBY_CONTRACT]: {
-                methods: [
-                  { name: 'create_game', entrypoint: 'create_game' },
-                  { name: 'join_game', entrypoint: 'join_game' },
-                ],
-              },
-              [GAMEPLAY_CONTRACT]: {
-                methods: [
-                  { name: 'play_card', entrypoint: 'play_card' },
-                  { name: 'draw_card', entrypoint: 'draw_card' },
-                  { name: 'pass_turn', entrypoint: 'pass_turn' },
-                  { name: 'timeout_turn', entrypoint: 'timeout_turn' },
-                ],
-              },
-            },
-          },
-        });
+        controllerRef.current = getController();
       }
-
       const account = await controllerRef.current.connect();
       if (account) {
-        setState({
-          account,
-          address: account.address,
-          connecting: false,
-        });
+        setState({ account, address: account.address, connecting: false });
       } else {
         setState((s) => ({ ...s, connecting: false }));
       }
@@ -88,24 +99,11 @@ export default function StarkzapProvider({ children }: { children: ReactNode }) 
   const execute = useCallback(
     async (calls: any[]) => {
       if (!state.account) throw new Error('Not connected');
-      try {
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Transaction timed out')), 15000),
-        );
-        const result = await Promise.race([
-          state.account.execute(calls),
-          timeoutPromise,
-        ]);
-        if (result && typeof result === 'object' && 'error' in result) {
-          const errMsg = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
-          console.error('[StarkzapProvider] Execute error result:', errMsg);
-          throw new Error(errMsg);
-        }
-        return result;
-      } catch (err) {
-        console.error('[StarkzapProvider] Execute failed:', err);
-        throw err;
+      const result = await state.account.execute(calls);
+      if (result && typeof result === 'object' && 'error' in result) {
+        throw new Error(typeof result.error === 'string' ? result.error : JSON.stringify(result.error));
       }
+      return result;
     },
     [state.account],
   );
