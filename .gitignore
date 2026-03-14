@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env.local
+*.log
+target/
+contracts/manifest_dev.json
+contracts/Scarb.lock
+.DS_Store
+*.log
