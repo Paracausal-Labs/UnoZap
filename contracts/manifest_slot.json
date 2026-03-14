@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x691da17eb9ef169b385eaaf3a303972d187479e30be146d3337423eaec6272d",
-    "address": "0x2880721c9c92b46cb875d205a55096ed9bbf16eb0b9386413c81c733887b4f7",
+    "class_hash": "0x57994b6a75fad550ca18b41ee82e2110e158c59028c4478109a67965a0e5b1e",
+    "address": "0x4f47236b6254f71300097a5e22a01eae1a3d4a7041cc2396d477cfea2f085ff",
     "seed": "unozap",
     "name": "UnoZap",
     "entrypoints": [
@@ -266,17 +266,6 @@
             "outputs": [
               {
                 "type": "dojo::world::resource::Resource"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "world_version",
-            "inputs": [],
-            "outputs": [
-              {
-                "type": "core::felt252"
               }
             ],
             "state_mutability": "view"
@@ -1490,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x24313a270f730ad40b461945b94e5a43aa840681aa3170d47fab0c4f5a9bdb7",
-      "class_hash": "0x202e69927b8201a0f9befbdcd5652d78562fade649cea55b870b04e6c76acf8",
+      "address": "0x5f230b330f31c32bca7ca931d46a0940c1dcadd301472ebaf610500a360879b",
+      "class_hash": "0x109377fb3c5e244c020abec84434060c73f7aa95259ae1c11ccff91aa50b423",
       "abi": [
         {
           "type": "impl",
@@ -1737,8 +1726,8 @@
       ]
     },
     {
-      "address": "0x23f831f63a7138d2662632811a6be6165722fd63db8fdabc5dfc6fcea23ba77",
-      "class_hash": "0x7b73fd5c0ff331a8ea5c489c232e7c6473fe4c8a00fda3adec3c620edf1fc7e",
+      "address": "0xd64e87d1a81d355676f420e79dc309cd36bef51705aeca28af9f3222ec155f",
+      "class_hash": "0x31026c010d6865937e2abbd9930d50b6d822f6b55839bd88f49556aad8d69b8",
       "abi": [
         {
           "type": "impl",
