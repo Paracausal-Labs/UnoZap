@@ -37,12 +37,7 @@ export default function StarkzapProvider({ children }: { children: ReactNode }) 
     setState((s) => ({ ...s, connecting: true }));
     try {
       const { StarkSDK, OnboardStrategy } = await import('starkzap');
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
-      const sdk = new StarkSDK(
-        rpcUrl
-          ? { rpcUrl, chainId: process.env.NEXT_PUBLIC_CHAIN_ID as any ?? 'SN_SEPOLIA' }
-          : { network: 'sepolia' }
-      );
+      const sdk = new StarkSDK({ network: 'sepolia' });
       const { wallet } = await sdk.onboard({
         strategy: OnboardStrategy.Cartridge,
         cartridge: {
