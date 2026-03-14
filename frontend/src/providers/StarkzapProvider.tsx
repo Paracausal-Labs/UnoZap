@@ -42,6 +42,7 @@ export default function StarkzapProvider({ children }: { children: ReactNode }) 
       if (!controllerRef.current) {
         controllerRef.current = new Controller({
           rpcUrl: RPC_URL,
+          preset: 'unozap',
           policies: {
             contracts: {
               [LOBBY_CONTRACT]: {
