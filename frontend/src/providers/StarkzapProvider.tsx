@@ -87,8 +87,24 @@ export default function StarkzapProvider({ children }: { children: ReactNode }) 
   const execute = useCallback(
     async (calls: any[]) => {
       if (!state.account) throw new Error('Not connected');
-      const result = await state.account.execute(calls);
-      return result;
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Transaction timed out')), 15000),
+        );
+        const result = await Promise.race([
+          state.account.execute(calls),
+          timeoutPromise,
+        ]);
+        if (result && typeof result === 'object' && 'error' in result) {
+          const errMsg = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
+          console.error('[StarkzapProvider] Execute error result:', errMsg);
+          throw new Error(errMsg);
+        }
+        return result;
+      } catch (err) {
+        console.error('[StarkzapProvider] Execute failed:', err);
+        throw err;
+      }
     },
     [state.account],
   );

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import UnoCard from './UnoCard';
 import ColorPicker from './ColorPicker';
 import { CardData } from '@/hooks/useGame';
-import { COLOR_HEX, colorName, COLOR_DISPLAY } from '@/lib/constants';
+import { COLOR_HEX, colorName } from '@/lib/constants';
 
 interface GameBoardProps {
   topColor: number;
@@ -61,27 +61,26 @@ export default function GameBoard({
 
   const hasDrawn = players.find((p) => p.playerIdx === myPlayerIdx)?.hasDrawn ?? false;
 
-  // Arrange opponents (relative to player)
   const opponents = players.filter((p) => p.playerIdx !== myPlayerIdx);
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-4xl mx-auto p-4">
       {/* Game over overlay */}
-      {gameState === 2 && (
+      {gameState === 2 && winner && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="glass rounded-2xl p-10 text-center glow-yellow">
-            <h2 className="text-4xl font-bold text-yellow-400 mb-3">Game Over!</h2>
+          <div className="game-panel text-center glow-yellow">
+            <h2 className="text-4xl font-bold text-yellow-400 mb-3 tracking-wide uppercase">
+              Game Over!
+            </h2>
             <p className="text-white text-lg">
-              {winner === players.find((p) => p.playerIdx === myPlayerIdx)?.address
-                ? 'You won!'
-                : `Player ${players.findIndex((p) => p.address === winner)} wins!`}
+              {winner === 'you' ? 'You won!' : `${winner} wins!`}
             </p>
           </div>
         </div>
       )}
 
       {/* Direction indicator */}
-      <div className="glass-light rounded-full px-4 py-1.5 text-sm text-gray-300">
+      <div className="glass-light rounded-full px-4 py-1.5 text-sm text-gray-300 tracking-wider uppercase">
         {direction === 0 ? 'Clockwise' : 'Counter-clockwise'}
       </div>
 
@@ -98,7 +97,7 @@ export default function GameBoard({
                   : ''
               }`}
             >
-              <div className="text-sm text-gray-200 font-semibold">
+              <div className="text-sm text-gray-200 font-semibold tracking-wide">
                 P{opp.playerIdx + 1}
               </div>
               <div className="flex gap-0.5">
@@ -113,7 +112,7 @@ export default function GameBoard({
               </div>
               <div className="text-xs text-gray-400">{opp.cardCount} cards</div>
               {isActive && (
-                <div className="text-xs text-yellow-400 font-bold">Thinking...</div>
+                <div className="text-xs text-yellow-400 font-bold tracking-wide">Thinking...</div>
               )}
             </div>
           );
@@ -138,7 +137,7 @@ export default function GameBoard({
         <div className="relative">
           <UnoCard color={topColor} value={topValue} disabled />
           <div
-            className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full shadow-lg"
+            className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full shadow-lg tracking-wider uppercase"
             style={{
               backgroundColor: COLOR_HEX[colorName(topColor)],
               color: 'white',
@@ -183,16 +182,15 @@ export default function GameBoard({
       {isMyTurn && hasDrawn && (
         <button
           onClick={onPassTurn}
-          className="px-8 py-2.5 glass-light rounded-xl font-medium text-white
-                     hover:bg-white/10 transition-all duration-200"
+          className="game-btn game-btn-cyan"
         >
-          Pass Turn
+          <span className="relative z-10">Pass Turn</span>
         </button>
       )}
 
       {/* My info */}
       <div
-        className={`text-sm font-bold px-5 py-2 rounded-full transition-all duration-300 ${
+        className={`text-sm font-bold px-5 py-2 rounded-full transition-all duration-300 tracking-wider uppercase ${
           isMyTurn
             ? 'bg-yellow-500 text-black glow-yellow'
             : 'glass-light text-gray-300'

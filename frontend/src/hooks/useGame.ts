@@ -6,9 +6,17 @@ import { fetchGame, fetchPlayers, fetchMyCards } from '@/lib/torii';
 import type { GameData, PlayerData, CardData } from '@/lib/torii';
 
 const GAMEPLAY_CONTRACT = process.env.NEXT_PUBLIC_GAMEPLAY_CONTRACT ?? '';
-const POLL_INTERVAL = 2000; // 2s polling
+const POLL_INTERVAL = 2000;
 
 export type { GameData, PlayerData, CardData };
+
+function addressesMatch(a: string, b: string): boolean {
+  try {
+    return BigInt(a) === BigInt(b);
+  } catch {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+}
 
 export function useGame(gameId: number | null) {
   const { address, execute } = useStarkzap();
@@ -34,31 +42,31 @@ export function useGame(gameId: number | null) {
     if (gameId === null) return;
 
     const poll = async () => {
-      const [gameData, playerData] = await Promise.all([
-        fetchGame(gameId),
-        fetchPlayers(gameId),
-      ]);
+      try {
+        const [gameData, playerData] = await Promise.all([
+          fetchGame(gameId),
+          fetchPlayers(gameId),
+        ]);
 
-      if (gameData) setGame(gameData);
-      if (playerData.length) {
-        setPlayers(playerData);
+        if (gameData) setGame(gameData);
+        if (playerData.length) {
+          setPlayers(playerData);
 
-        // Find my player index
-        if (address) {
-          const me = playerData.find(
-            (p) => p.address.toLowerCase() === address.toLowerCase(),
-          );
-          if (me) {
-            setMyPlayerIdx(me.playerIdx);
-            // Fetch my cards
-            const cards = await fetchMyCards(gameId, me.playerIdx);
-            setMyHand(cards);
+          if (address) {
+            const me = playerData.find((p) => addressesMatch(p.address, address));
+            if (me) {
+              setMyPlayerIdx(me.playerIdx);
+              const cards = await fetchMyCards(gameId, me.playerIdx);
+              setMyHand(cards);
+            }
           }
         }
+      } catch (err) {
+        console.error('[useGame] Polling error:', err);
       }
     };
 
-    poll(); // initial fetch
+    poll();
     pollRef.current = setInterval(poll, POLL_INTERVAL);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -76,9 +84,10 @@ export function useGame(gameId: number | null) {
     return () => clearInterval(interval);
   }, [game]);
 
-  // Actions
+  // Actions - all guarded against null gameId
   const playCard = useCallback(
     async (cardIndex: number, chosenColor: number = 0) => {
+      if (gameId === null) throw new Error('No game ID');
       await execute([
         {
           contractAddress: GAMEPLAY_CONTRACT,
@@ -91,6 +100,7 @@ export function useGame(gameId: number | null) {
   );
 
   const drawCard = useCallback(async () => {
+    if (gameId === null) throw new Error('No game ID');
     await execute([
       {
         contractAddress: GAMEPLAY_CONTRACT,
@@ -101,6 +111,7 @@ export function useGame(gameId: number | null) {
   }, [execute, gameId]);
 
   const passTurn = useCallback(async () => {
+    if (gameId === null) throw new Error('No game ID');
     await execute([
       {
         contractAddress: GAMEPLAY_CONTRACT,
@@ -111,6 +122,7 @@ export function useGame(gameId: number | null) {
   }, [execute, gameId]);
 
   const callTimeout = useCallback(async () => {
+    if (gameId === null) throw new Error('No game ID');
     await execute([
       {
         contractAddress: GAMEPLAY_CONTRACT,

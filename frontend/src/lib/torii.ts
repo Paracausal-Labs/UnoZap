@@ -11,7 +11,11 @@ async function gqlQuery<T>(query: string): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query }),
   });
-  if (!res.ok) throw new Error(`Torii query failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.warn(`[torii] GraphQL request failed (${res.status}):`, body);
+    throw new Error(`Torii query failed: ${res.status}`);
+  }
   const json: GqlResponse<T> = await res.json();
   return json.data;
 }
@@ -99,7 +103,37 @@ export async function fetchGame(gameId: number): Promise<GameData | null> {
       drawIndex: feltToNum(n.draw_index),
       seed: feltToStr(n.seed),
     };
-  } catch {
+  } catch (err) {
+    console.warn('[torii] fetchGame failed:', err);
+    return null;
+  }
+}
+
+export async function fetchGameByCreator(creatorAddress: string): Promise<number | null> {
+  const query = `{
+    ${NAMESPACE}GameModels(where: { creator: "${creatorAddress}" }, limit: 10) {
+      edges {
+        node {
+          game_id
+          creator
+        }
+      }
+    }
+  }`;
+
+  try {
+    const data = await gqlQuery<any>(query);
+    const edges = data[`${NAMESPACE}GameModels`]?.edges;
+    if (!edges?.length) return null;
+    // Return the highest game_id (most recent)
+    let maxId = 0;
+    for (const edge of edges) {
+      const id = feltToNum(edge.node.game_id);
+      if (id > maxId) maxId = id;
+    }
+    return maxId;
+  } catch (err) {
+    console.warn('[torii] fetchGameByCreator failed:', err);
     return null;
   }
 }
@@ -128,7 +162,8 @@ export async function fetchPlayers(gameId: number): Promise<PlayerData[]> {
       cardCount: feltToNum(e.node.card_count),
       hasDrawn: e.node.has_drawn === true || e.node.has_drawn === 1,
     }));
-  } catch {
+  } catch (err) {
+    console.warn('[torii] fetchPlayers failed:', err);
     return [];
   }
 }
@@ -157,7 +192,8 @@ export async function fetchCards(gameId: number, location: number): Promise<Card
       value: feltToNum(e.node.card_value),
       location: feltToNum(e.node.location),
     }));
-  } catch {
+  } catch (err) {
+    console.warn('[torii] fetchCards failed:', err);
     return [];
   }
 }
@@ -167,11 +203,9 @@ export async function fetchMyCards(gameId: number, playerIdx: number): Promise<C
 }
 
 export async function fetchAllPlayerCards(gameId: number): Promise<CardData[]> {
-  // Fetch cards for all 4 players + discard
-  const all: CardData[] = [];
-  for (let loc = 1; loc <= 5; loc++) {
-    const cards = await fetchCards(gameId, loc);
-    all.push(...cards);
-  }
-  return all;
+  // Fetch cards for all 4 players + discard in parallel
+  const results = await Promise.all(
+    [1, 2, 3, 4, 5].map((loc) => fetchCards(gameId, loc)),
+  );
+  return results.flat();
 }

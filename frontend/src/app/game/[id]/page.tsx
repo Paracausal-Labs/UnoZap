@@ -10,6 +10,14 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+function addressesMatch(a: string, b: string): boolean {
+  try {
+    return BigInt(a) === BigInt(b);
+  } catch {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+}
+
 export default function GamePage({ params }: PageProps) {
   const { id } = use(params);
   const gameId = Number(id);
@@ -39,19 +47,19 @@ export default function GamePage({ params }: PageProps) {
           quality={90}
         />
         <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 pointer-events-none vignette" />
         <div className="relative z-10 flex flex-col items-center gap-6">
-          <h2 className="text-3xl font-bold drop-shadow-lg">UnoZap - Game #{gameId}</h2>
+          <h2 className="text-3xl font-bold drop-shadow-lg tracking-wide uppercase">
+            UnoZap - Game #{gameId}
+          </h2>
           <button
             onClick={connect}
             disabled={connecting}
-            className="px-10 py-4 bg-gradient-to-r from-purple-600 via-violet-600 to-blue-600
-                       rounded-2xl font-bold text-lg shadow-lg
-                       hover:from-purple-500 hover:via-violet-500 hover:to-blue-500
-                       hover:shadow-purple-500/30 hover:shadow-xl
-                       transition-all duration-300 disabled:opacity-50
-                       glow-purple"
+            className="game-btn game-btn-purple"
           >
-            {connecting ? 'Connecting...' : 'Connect to Play'}
+            <span className="relative z-10">
+              {connecting ? 'Connecting...' : 'Connect to Play'}
+            </span>
           </button>
         </div>
       </div>
@@ -70,13 +78,30 @@ export default function GamePage({ params }: PageProps) {
           quality={90}
         />
         <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 pointer-events-none vignette" />
         <div className="relative z-10 flex flex-col items-center gap-5">
-          <h2 className="text-2xl font-bold drop-shadow-lg">Game #{gameId}</h2>
+          <h2 className="text-2xl font-bold drop-shadow-lg tracking-wide uppercase">
+            Game #{gameId}
+          </h2>
           <div className="animate-spin w-10 h-10 border-3 border-white/30 border-t-white rounded-full" />
           <div className="text-gray-300">Loading game state from Torii...</div>
         </div>
       </div>
     );
+  }
+
+  // Determine winner display text
+  let winnerDisplay: string | undefined;
+  if (game.state === 2 && game.winner) {
+    const myAddr = address ?? '';
+    if (addressesMatch(game.winner, myAddr)) {
+      winnerDisplay = 'you';
+    } else {
+      const winnerPlayer = players.find((p) => addressesMatch(p.address, game.winner));
+      winnerDisplay = winnerPlayer
+        ? `Player ${winnerPlayer.playerIdx + 1}`
+        : game.winner.slice(0, 8) + '...';
+    }
   }
 
   // Waiting room
@@ -92,8 +117,11 @@ export default function GamePage({ params }: PageProps) {
           quality={90}
         />
         <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 pointer-events-none vignette" />
         <div className="relative z-10 flex flex-col items-center gap-8">
-          <h2 className="text-4xl font-bold drop-shadow-lg">Waiting for Players</h2>
+          <h2 className="text-4xl font-bold drop-shadow-lg tracking-wide uppercase">
+            Waiting for Players
+          </h2>
           <div className="flex gap-5">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
@@ -138,6 +166,7 @@ export default function GamePage({ params }: PageProps) {
         quality={90}
       />
       <div className="absolute inset-0 bg-black/30" />
+      <div className="absolute inset-0 pointer-events-none vignette" />
       <div className="relative z-10 w-full p-4">
         <GameBoard
           topColor={game.topColor}
@@ -150,7 +179,7 @@ export default function GamePage({ params }: PageProps) {
           direction={game.direction}
           timeLeft={timeLeft}
           gameState={game.state}
-          winner={game.state === 2 ? game.winner : undefined}
+          winner={winnerDisplay}
           canPlay={canPlay}
           onPlayCard={playCard}
           onDrawCard={drawCard}

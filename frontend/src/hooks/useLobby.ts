@@ -2,32 +2,51 @@
 
 import { useState, useCallback } from 'react';
 import { useStarkzap } from '@/providers/StarkzapProvider';
+import { fetchGameByCreator } from '@/lib/torii';
 
 const LOBBY_CONTRACT = process.env.NEXT_PUBLIC_LOBBY_CONTRACT ?? '';
 
 export function useLobby() {
-  const { execute } = useStarkzap();
+  const { execute, address } = useStarkzap();
   const [loading, setLoading] = useState(false);
 
   const createGame = useCallback(
     async (joinCode: string) => {
       setLoading(true);
       try {
-        // Convert join code string to felt252 (simple numeric hash)
         const codeFelt = stringToFelt(joinCode);
-        const tx = await execute([
+        const result = await execute([
           {
             contractAddress: LOBBY_CONTRACT,
             entrypoint: 'create_game',
             calldata: [codeFelt],
           },
         ]);
-        return tx;
+
+        const txHash = result?.transaction_hash ?? null;
+
+        // Poll Torii to find the game created by this address
+        let gameId: number | null = null;
+        if (address) {
+          for (let attempt = 0; attempt < 10; attempt++) {
+            await delay(1500);
+            const found = await fetchGameByCreator(address);
+            if (found !== null) {
+              gameId = found;
+              break;
+            }
+          }
+        }
+
+        return { txHash, gameId };
+      } catch (err) {
+        console.error('[useLobby] createGame failed:', err);
+        throw err;
       } finally {
         setLoading(false);
       }
     },
-    [execute],
+    [execute, address],
   );
 
   const joinGame = useCallback(
@@ -35,13 +54,17 @@ export function useLobby() {
       setLoading(true);
       try {
         const codeFelt = stringToFelt(joinCode);
-        await execute([
+        const result = await execute([
           {
             contractAddress: LOBBY_CONTRACT,
             entrypoint: 'join_game',
             calldata: [String(gameId), codeFelt],
           },
         ]);
+        return { txHash: result?.transaction_hash ?? null };
+      } catch (err) {
+        console.error('[useLobby] joinGame failed:', err);
+        throw err;
       } finally {
         setLoading(false);
       }
@@ -53,10 +76,13 @@ export function useLobby() {
 }
 
 function stringToFelt(str: string): string {
-  // Encode short string as felt252 (max 31 chars)
   let hex = '0x';
   for (let i = 0; i < str.length && i < 31; i++) {
     hex += str.charCodeAt(i).toString(16).padStart(2, '0');
   }
   return hex;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
